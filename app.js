@@ -1,7 +1,8 @@
 /**
- * EARTH EVENTS GLOBE
- * NASA EONET v3 + NASA GIBS Satellite Tiles Web App
- * ES Module Architecture
+ * EARTH, RIGHT NOW (TileEarth)
+ * Editorial natural events atlas visualizing live NASA EONET data
+ * over NASA GIBS satellite tiles on an interactive Globe.gl canvas.
+ * Plain vanilla ES module.
  */
 
 // --- CONFIGURATION & CONSTANTS ---
@@ -9,26 +10,81 @@ const EONET_API_BASE = 'https://eonet.gsfc.nasa.gov/api/v3';
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes cache
 const BLUE_MARBLE_FALLBACK = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
 
-// Distinct category colors for visual clarity
-const CATEGORY_COLORS = {
-  wildfires: '#f97316',       // Orange
-  severeStorms: '#a855f7',    // Purple
-  volcanoes: '#ef4444',       // Red
-  floods: '#3b82f6',          // Blue
-  seaLakeIce: '#06b6d4',      // Cyan
-  earthquakes: '#eab308',     // Yellow
-  landslides: '#84cc16',      // Lime
-  dustHaze: '#d97706',        // Amber
-  drought: '#b45309',         // Brown
-  snow: '#e0f2fe',            // Ice light blue
-  tempExtremes: '#f43f5e',    // Rose
-  waterColor: '#14b8a6',      // Teal
-  manmade: '#94a3b8'          // Slate
+// Accessible, distinct, muted tones for categories
+const CATEGORY_STYLES = {
+  wildfires: {
+    title: 'Wildfires',
+    color: '#c2410c', // Warm rust
+    icon: `<svg viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`
+  },
+  severeStorms: {
+    title: 'Severe Storms',
+    color: '#7e22ce', // Deep violet
+    icon: `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-1.74 19.85M12 6a6 6 0 0 1 5.66 4M12 10a2 2 0 0 0-1.9 2.6M7 16a6 6 0 0 1-1-3.5"/></svg>`
+  },
+  volcanoes: {
+    title: 'Volcanoes',
+    color: '#b91c1c', // Muted crimson
+    icon: `<svg viewBox="0 0 24 24"><path d="m2 22 7-14h6l7 14H2z"/><path d="M10 8V3M14 8V2M12 8V4"/></svg>`
+  },
+  floods: {
+    title: 'Floods',
+    color: '#1d4ed8', // River blue
+    icon: `<svg viewBox="0 0 24 24"><path d="M2 12c2.5-2 5.5-2 8 0s5.5 2 8 0 3.5-1 4-1"/><path d="M2 17c2.5-2 5.5-2 8 0s5.5 2 8 0 3.5-1 4-1"/></svg>`
+  },
+  seaLakeIce: {
+    title: 'Sea & Lake Ice',
+    color: '#0e7490', // Glacial teal
+    icon: `<svg viewBox="0 0 24 24"><path d="m10 4 2 2 2-2M10 20l2-2 2 2M4 10l2 2-2 2M20 10l-2 2 2 2M2 12h20M12 2v20"/></svg>`
+  },
+  earthquakes: {
+    title: 'Earthquakes',
+    color: '#a16207', // Amber earth
+    icon: `<svg viewBox="0 0 24 24"><path d="M2 12h5l2-6 4 12 3-8 2 4h4"/></svg>`
+  },
+  landslides: {
+    title: 'Landslides',
+    color: '#4d7c0f', // Forest moss
+    icon: `<svg viewBox="0 0 24 24"><path d="m3 20 9-14 4 6 5-3v11H3z"/><rect x="15" y="10" width="3" height="3" rx="0.5"/><rect x="18" y="15" width="2.5" height="2.5" rx="0.5"/></svg>`
+  },
+  dustHaze: {
+    title: 'Dust & Haze',
+    color: '#9a3412', // Desert ochre
+    icon: `<svg viewBox="0 0 24 24"><path d="M4 8h16M2 12h20M6 16h12M8 20h8"/></svg>`
+  },
+  drought: {
+    title: 'Drought',
+    color: '#78350f', // Parched soil
+    icon: `<svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M12 1v2M12 11v2M18 7h2M4 7h2M2 19h20M7 19l2 3M17 19l-2 3M12 19v3"/></svg>`
+  },
+  snow: {
+    title: 'Snow',
+    color: '#0284c7', // Winter sky
+    icon: `<svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M6.5 6.5l11 11M6.5 17.5l11-11"/></svg>`
+  },
+  tempExtremes: {
+    title: 'Temperature Extremes',
+    color: '#be123c', // Thermal rose
+    icon: `<svg viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>`
+  },
+  waterColor: {
+    title: 'Water Color',
+    color: '#0f766e', // Deep sea
+    icon: `<svg viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>`
+  },
+  manmade: {
+    title: 'Manmade',
+    color: '#475569', // Industrial slate
+    icon: `<svg viewBox="0 0 24 24"><path d="M2 20h20M4 20V10l6 4V10l6 4v6M18 20V4h2v16"/></svg>`
+  },
+  unknown: {
+    title: 'Natural Event',
+    color: '#52525b', // Neutral zinc
+    icon: `<svg viewBox="0 0 24 24"><path d="M12 2 2 12l10 10 10-10L12 2z"/></svg>`
+  }
 };
 
-const DEFAULT_COLOR = '#38bdf8';
-
-// Supported Verified Basemap layers
+// Basemap layer parameters
 const BASEMAP_LAYERS = {
   truecolor: {
     id: 'MODIS_Terra_CorrectedReflectance_TrueColor',
@@ -42,7 +98,7 @@ const BASEMAP_LAYERS = {
     ext: 'jpg',
     matrix: 'GoogleMapsCompatible_Level8',
     maxZoom: 8,
-    dated: false // Static night lights composite
+    dated: false
   },
   temp: {
     id: 'MODIS_Terra_Land_Surface_Temp_Day',
@@ -65,19 +121,28 @@ const state = {
   includeClosed: false,
   searchQuery: '',
   selectedEvent: null,
-  isAutoRotating: true,
-  globeInstance: null
+  isAutoRotating: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  globeInstance: null,
+  activeTooltipEl: null
 };
 
-// --- UTILITIES ---
+// --- DATE & TIME HELPERS ---
 function getFormattedDate(daysAgo = 1) {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() - daysAgo);
   return d.toISOString().split('T')[0];
 }
 
-function getCategoryColor(categoryId) {
-  return CATEGORY_COLORS[categoryId] || DEFAULT_COLOR;
+function formatRelativeTime(date) {
+  const dt = new Date(date);
+  const diffMs = Date.now() - dt.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  
+  if (diffHours < 1) return 'Updated just now';
+  if (diffHours < 24) return `Updated ${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `Updated ${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function formatCoordinates(lat, lng) {
@@ -86,30 +151,25 @@ function formatCoordinates(lat, lng) {
   return `${latStr}, ${lngStr}`;
 }
 
+function getCategoryConfig(categoryId) {
+  return CATEGORY_STYLES[categoryId] || CATEGORY_STYLES.unknown;
+}
+
 // --- NORMALIZATION ---
-/**
- * Normalizes an EONET event into a clean, predictable shape:
- * - centroid / latest position [lon, lat]
- * - full historical track coordinates
- * - formatted date and category
- */
 function normalizeEvent(raw) {
   if (!raw || !raw.geometry || raw.geometry.length === 0) return null;
 
   const geometries = [...raw.geometry];
-  // Sort by date ascending to ensure track ordering
   geometries.sort((a, b) => new Date(a.date) - new Date(b.date));
 
   const latestGeom = geometries[geometries.length - 1];
   let lat = null;
   let lng = null;
 
-  // Handle Point vs Polygon vs MultiPoint
   if (latestGeom.type === 'Point' && Array.isArray(latestGeom.coordinates)) {
     lng = Number(latestGeom.coordinates[0]);
     lat = Number(latestGeom.coordinates[1]);
   } else if (latestGeom.type === 'Polygon' && Array.isArray(latestGeom.coordinates)) {
-    // Calculate centroid or take the first coordinate ring
     const ring = latestGeom.coordinates[0] || [];
     if (ring.length > 0) {
       let sumLng = 0, sumLat = 0;
@@ -126,10 +186,10 @@ function normalizeEvent(raw) {
     return null;
   }
 
-  const primaryCat = (raw.categories && raw.categories[0]) ? raw.categories[0] : { id: 'other', title: 'Other' };
-  const catColor = getCategoryColor(primaryCat.id);
-  
-  // Extract historical track path (array of [lat, lng])
+  const primaryCat = (raw.categories && raw.categories[0]) ? raw.categories[0] : { id: 'unknown', title: 'Natural Event' };
+  const catConfig = getCategoryConfig(primaryCat.id);
+
+  // Extract track trajectory coordinates for storms, icebergs, etc.
   const trackPath = [];
   geometries.forEach(g => {
     if (g.type === 'Point' && Array.isArray(g.coordinates)) {
@@ -143,10 +203,9 @@ function normalizeEvent(raw) {
 
   return {
     id: raw.id,
-    title: raw.title || 'Unnamed Event',
-    description: raw.description || '',
+    title: raw.title || 'Natural Event',
     category: primaryCat,
-    categoryColor: catColor,
+    categoryConfig: catConfig,
     sources: raw.sources || [],
     geometry: geometries,
     lat,
@@ -154,14 +213,14 @@ function normalizeEvent(raw) {
     altitude: 0.015,
     trackPath: trackPath.length > 1 ? trackPath : null,
     lastUpdatedDate: lastUpdated,
-    lastUpdatedStr: lastUpdated.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    lastUpdatedRelative: formatRelativeTime(lastUpdated),
     isRecent,
     closed: !!raw.closed,
     magnitude: latestGeom.magnitudeValue ? `${latestGeom.magnitudeValue} ${latestGeom.magnitudeUnit || ''}` : null
   };
 }
 
-// --- DATA FETCHING & SESSION CACHING ---
+// --- DATA FETCHING WITH TIMEOUT & ROBUST CACHING ---
 async function fetchWithTimeout(url, timeoutMs = 15000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -182,18 +241,8 @@ async function fetchCategories() {
     const data = await res.json();
     return data.categories || [];
   } catch (err) {
-    console.warn('Failed to fetch categories, using defaults:', err);
-    return [
-      { id: 'wildfires', title: 'Wildfires' },
-      { id: 'severeStorms', title: 'Severe Storms' },
-      { id: 'volcanoes', title: 'Volcanoes' },
-      { id: 'floods', title: 'Floods' },
-      { id: 'seaLakeIce', title: 'Sea and Lake Ice' },
-      { id: 'earthquakes', title: 'Earthquakes' },
-      { id: 'landslides', title: 'Landslides' },
-      { id: 'dustHaze', title: 'Dust and Haze' },
-      { id: 'drought', title: 'Drought' }
-    ];
+    console.warn('Categories API unavailable, using local catalog:', err);
+    return Object.entries(CATEGORY_STYLES).map(([id, info]) => ({ id, title: info.title }));
   }
 }
 
@@ -205,15 +254,14 @@ async function fetchEvents(daysParam = 0, retryCount = 1) {
   if (cached && cachedTime && (Date.now() - Number(cachedTime) < CACHE_DURATION_MS)) {
     try {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed; // Cache valid empty array too
       }
     } catch (e) {
       console.warn('Corrupt cache:', e);
     }
   }
 
-  // Construct URL - limit to 200 as specified in project prompt
   let url = `${EONET_API_BASE}/events?limit=200`;
   if (daysParam > 0) {
     url += `&days=${daysParam}`;
@@ -223,15 +271,19 @@ async function fetchEvents(daysParam = 0, retryCount = 1) {
 
   try {
     const res = await fetchWithTimeout(url, 20000);
-    if (!res.ok) throw new Error(`EONET API request failed with status: ${res.status}`);
+    if (!res.ok) {
+      const err = new Error(`HTTP ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
     const data = await res.json();
     
-    if (data && data.events) {
+    if (data && Array.isArray(data.events)) {
       try {
         sessionStorage.setItem(cacheKey, JSON.stringify(data.events));
         sessionStorage.setItem(`${cacheKey}_time`, String(Date.now()));
       } catch (e) {
-        console.warn('Session storage quota exceeded or disabled');
+        console.warn('Session storage write failed');
       }
       return data.events;
     }
@@ -245,64 +297,52 @@ async function fetchEvents(daysParam = 0, retryCount = 1) {
   }
 }
 
-// --- GLOBE INITIALIZATION (Stage 1 & 2) ---
+// --- GLOBE INITIALIZATION (Phase 1 & Phase 2) ---
 function initGlobe() {
   const container = document.getElementById('globeViz');
-  
+  if (!container) throw new Error('Globe container #globeViz not found');
+  if (typeof Globe !== 'function') throw new Error('Globe.gl library is not loaded');
+
   const globe = Globe()(container)
-    .backgroundColor('#030712')
+    .backgroundColor('#080b11')
     .showGlobe(true)
     .showAtmosphere(true)
-    .atmosphereColor('#38bdf8')
-    .atmosphereAltitude(0.18)
-    .globeImageUrl(BLUE_MARBLE_FALLBACK); // Fallback image base
+    .atmosphereColor('#fbbf24')
+    .atmosphereAltitude(0.12)
+    .globeImageUrl(BLUE_MARBLE_FALLBACK);
 
-  // Configure Point visualization
+  // Configure HTML Elements Layer (Phase 2: bespoke category symbols)
   globe
-    .pointsData([])
-    .pointLat('lat')
-    .pointLng('lng')
-    .pointAltitude(0.015)
-    .pointRadius(0.8)
-    .pointColor('categoryColor')
-    .pointResolution(16)
-    .onPointHover(handlePointHover)
-    .onPointClick(handlePointClick);
+    .htmlElementsData([])
+    .htmlLat('lat')
+    .htmlLng('lng')
+    .htmlAltitude('altitude')
+    .htmlElement(createEventMarkerElement)
+    .htmlElementVisibilityModifier((el, isVisible) => {
+      // Hide markers located on the far side of the globe
+      el.style.opacity = isVisible ? '1' : '0';
+      el.style.pointerEvents = isVisible ? 'auto' : 'none';
+    });
 
-  // Configure Ring visualization (Pulsing rings for events updated in last 48h)
-  globe
-    .ringsData([])
-    .ringLat('lat')
-    .ringLng('lng')
-    .ringAltitude(0.012)
-    .ringColor(d => (t) => {
-      // Self-propagating fading ripple ring
-      return `rgba(255, 255, 255, ${Math.max(0, 0.9 * (1 - t))})`;
-    })
-    .ringMaxRadius(2.5)
-    .ringPropagationSpeed(1.8)
-    .ringRepeatPeriod(1800);
-
-  // Configure Paths visualization (for storm & iceberg tracks)
+  // Configure Movement Paths for tracking storms, icebergs, etc.
   globe
     .pathsData([])
     .pathPoints('points')
     .pathPointLat(p => p[0])
     .pathPointLng(p => p[1])
-    .pathColor(() => '#38bdf8')
-    .pathStroke(2.5)
-    .pathDashLength(0.05)
+    .pathColor(() => '#fbbf24')
+    .pathStroke(2.2)
+    .pathDashLength(0.04)
     .pathDashGap(0.02)
-    .pathDashAnimateTime(2500);
+    .pathDashAnimateTime(2000);
 
-  // Auto-rotation setup
+  // Auto-rotation controls
   const controls = globe.controls();
-  controls.autoRotate = true;
-  controls.autoRotateSpeed = 0.5;
+  controls.autoRotate = state.isAutoRotating;
+  controls.autoRotateSpeed = 0.4;
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
 
-  // Stop auto-rotation upon user interaction
   controls.addEventListener('start', () => {
     if (state.isAutoRotating) {
       controls.autoRotate = false;
@@ -311,103 +351,121 @@ function initGlobe() {
     }
   });
 
-  // Tile engine setup with GIBS WMTS
   applyTileEngine(globe);
-
   state.globeInstance = globe;
   return globe;
 }
 
-// Wire the tiles into globe.gl via its tile-engine option
+// Slippy map GIBS tile engine
 function applyTileEngine(globe) {
+  if (typeof globe.globeTileEngineUrl !== 'function') return;
+
   const layerCfg = BASEMAP_LAYERS[state.activeLayerKey] || BASEMAP_LAYERS.truecolor;
   const dateStr = layerCfg.dated ? state.selectedDate : 'default';
 
   globe.globeTileEngineUrl((x, y, l) => {
-    // Guard against requests exceeding the real max zoom level of the layer
     if (l > layerCfg.maxZoom) return null;
     return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layerCfg.id}/default/${dateStr}/${layerCfg.matrix}/${l}/${y}/${x}.${layerCfg.ext}`;
   });
 
-  // Trigger cache refresh
   if (typeof globe.globeTileEngineClearCache === 'function') {
     globe.globeTileEngineClearCache();
   }
 }
 
-// --- HOVER & CLICK HANDLERS ---
-let tooltipEl = null;
+// --- PHASE 2: BESPOKE HTML EVENT MARKERS ---
+function createEventMarkerElement(event) {
+  const el = document.createElement('div');
+  el.className = `event-globe-marker ${event.isRecent ? 'is-recent' : ''}`;
+  el.style.backgroundColor = event.categoryConfig.color;
+  el.setAttribute('tabindex', '0');
+  el.setAttribute('role', 'button');
+  el.setAttribute('aria-label', `${event.title}, ${event.category.title}`);
 
-function handlePointHover(point, prevPoint) {
-  const container = document.getElementById('globeViz');
-  
-  if (!point) {
-    if (tooltipEl) {
-      tooltipEl.remove();
-      tooltipEl = null;
+  el.innerHTML = event.categoryConfig.icon;
+
+  if (event.clusterCount && event.clusterCount > 1) {
+    const badge = document.createElement('span');
+    badge.className = 'cluster-count-badge';
+    badge.textContent = event.clusterCount;
+    el.appendChild(badge);
+  }
+
+  // Hover Tooltip
+  el.addEventListener('mouseenter', (e) => showQuietTooltip(event, e));
+  el.addEventListener('mouseleave', hideQuietTooltip);
+
+  // Click & Keyboard Focus Fly-to
+  const activate = () => selectAndFlyToEvent(event);
+  el.addEventListener('click', activate);
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      activate();
     }
-    container.style.cursor = 'default';
-    return;
-  }
+  });
 
-  container.style.cursor = 'pointer';
+  return el;
+}
 
-  if (!tooltipEl) {
-    tooltipEl = document.createElement('div');
-    tooltipEl.className = 'globe-tooltip';
-    document.body.appendChild(tooltipEl);
-  }
-
-  tooltipEl.innerHTML = `
-    <div class="tooltip-category" style="color: ${point.categoryColor}">${point.category.title}</div>
-    <div class="tooltip-title">${point.title}</div>
-    <div class="tooltip-date">Updated: ${point.lastUpdatedStr} ${point.isRecent ? '• <span style="color:#22c55e">LIVE (&lt;48h)</span>' : ''}</div>
+// Quiet, restrained tooltip
+function showQuietTooltip(event, e) {
+  hideQuietTooltip();
+  const tooltip = document.createElement('div');
+  tooltip.className = 'globe-tooltip-quiet';
+  tooltip.innerHTML = `
+    <div class="tooltip-badge">
+      ${event.categoryConfig.icon}
+      <span>${event.category.title}</span>
+    </div>
+    <div class="tooltip-title-text">${event.title}</div>
+    <div class="tooltip-rel-time">${event.lastUpdatedRelative}</div>
   `;
+  document.body.appendChild(tooltip);
 
-  const onMouseMove = (e) => {
-    if (tooltipEl) {
-      tooltipEl.style.left = `${e.clientX}px`;
-      tooltipEl.style.top = `${e.clientY}px`;
-    }
-  };
-
-  window.addEventListener('mousemove', onMouseMove, { once: true });
+  const rect = e.target.getBoundingClientRect();
+  tooltip.style.left = `${rect.left + rect.width / 2}px`;
+  tooltip.style.top = `${rect.top}px`;
+  state.activeTooltipEl = tooltip;
 }
 
-function handlePointClick(point) {
-  if (!point) return;
-  selectAndFlyToEvent(point);
-}
-
-function flyToEvent(point, altitude = 0.6, durationMs = 1500) {
-  if (!state.globeInstance || !point) return;
-  state.globeInstance.pointOfView({
-    lat: point.lat,
-    lng: point.lng,
-    altitude
-  }, durationMs);
-}
-
-function selectAndFlyToEvent(point) {
-  state.selectedEvent = point;
-  flyToEvent(point, 0.7, 1400);
-  openDetailPanel(point);
-
-  // Render movement track on the globe if present
-  if (point.trackPath && point.trackPath.length > 1) {
-    state.globeInstance.pathsData([{
-      id: point.id,
-      points: point.trackPath
-    }]);
-  } else {
-    state.globeInstance.pathsData([]);
+function hideQuietTooltip() {
+  if (state.activeTooltipEl) {
+    state.activeTooltipEl.remove();
+    state.activeTooltipEl = null;
   }
 }
 
-// --- EVENT DETAIL PANEL (Stage 3) ---
+// Camera Fly-To & Selection
+function selectAndFlyToEvent(event) {
+  state.selectedEvent = event;
+  if (state.globeInstance) {
+    state.globeInstance.pointOfView({
+      lat: event.lat,
+      lng: event.lng,
+      altitude: 0.6
+    }, 1400);
+
+    // Render historical track path if storm/iceberg
+    if (event.trackPath && event.trackPath.length > 1) {
+      state.globeInstance.pathsData([{
+        id: event.id,
+        points: event.trackPath
+      }]);
+    } else {
+      state.globeInstance.pathsData([]);
+    }
+  }
+
+  openDetailPanel(event);
+}
+
+// --- EVENT DETAIL SHEET ---
 function openDetailPanel(event) {
   const panel = document.getElementById('eventDetailPanel');
   const catBadge = document.getElementById('panelCategoryBadge');
+  const catIcon = document.getElementById('panelCategoryIcon');
+  const catName = document.getElementById('panelCategoryName');
   const title = document.getElementById('panelTitle');
   const status = document.getElementById('panelStatus');
   const lastDate = document.getElementById('panelLastDate');
@@ -419,21 +477,17 @@ function openDetailPanel(event) {
   const trackPointsCount = document.getElementById('trackPointsCount');
   const sourcesList = document.getElementById('panelSourcesList');
 
-  // Populate data
-  catBadge.textContent = event.category.title.toUpperCase();
-  catBadge.style.color = event.categoryColor;
-  catBadge.style.borderColor = event.categoryColor;
-  catBadge.style.backgroundColor = `${event.categoryColor}22`;
-
+  catIcon.innerHTML = event.categoryConfig.icon;
+  catName.textContent = event.category.title;
   title.textContent = event.title;
-  status.textContent = event.closed ? 'CLOSED' : 'OPEN';
-  status.style.color = event.closed ? '#94a3b8' : '#22c55e';
-  lastDate.textContent = event.lastUpdatedStr;
+  status.textContent = event.closed ? 'Closed' : 'Open';
+  status.style.color = event.closed ? 'var(--status-closed)' : 'var(--status-open)';
+  lastDate.textContent = event.lastUpdatedRelative;
   coords.textContent = formatCoordinates(event.lat, event.lng);
   obsCount.textContent = event.geometry.length;
 
   if (event.magnitude) {
-    magRow.style.display = 'flex';
+    magRow.style.display = 'block';
     magnitude.textContent = event.magnitude;
   } else {
     magRow.style.display = 'none';
@@ -446,42 +500,39 @@ function openDetailPanel(event) {
     trackSection.style.display = 'none';
   }
 
-  // Sources
   sourcesList.innerHTML = '';
   if (event.sources && event.sources.length > 0) {
     event.sources.forEach(src => {
       const li = document.createElement('li');
-      li.innerHTML = `<a href="${src.url}" target="_blank" rel="noopener noreferrer">${src.id || 'External Reference'} &nearr;</a>`;
+      li.innerHTML = `<a href="${src.url}" target="_blank" rel="noopener noreferrer">${src.id || 'Scientific report source'} &nearr;</a>`;
       sourcesList.appendChild(li);
     });
   } else {
-    sourcesList.innerHTML = '<li style="color: var(--text-dim); font-size: 11px;">No external sources linked.</li>';
+    sourcesList.innerHTML = '<li style="color: var(--text-tertiary); font-size: 12px;">No external sources linked.</li>';
   }
 
   panel.classList.add('open');
-  // Close insight drawer if open to prevent overlap
-  document.getElementById('insightDrawer')?.classList.remove('open');
+  panel.setAttribute('aria-hidden', 'false');
 }
 
 function closeDetailPanel() {
   const panel = document.getElementById('eventDetailPanel');
   panel.classList.remove('open');
+  panel.setAttribute('aria-hidden', 'true');
   if (state.globeInstance) {
     state.globeInstance.pathsData([]);
   }
   state.selectedEvent = null;
 }
 
-// --- FILTERING & RENDERING (Stage 4) ---
+// --- FILTERING & CLUSTERING ---
 function filterEvents() {
   const query = state.searchQuery.trim().toLowerCase();
-  
-  state.filteredEvents = state.allEvents.filter(ev => {
-    // 1. Category filter
+
+  const filtered = state.allEvents.filter(ev => {
     if (state.selectedCategoryIds.size > 0 && !state.selectedCategoryIds.has(ev.category.id)) {
       return false;
     }
-    // 2. Search query filter
     if (query) {
       const matchTitle = ev.title.toLowerCase().includes(query);
       const matchCat = ev.category.title.toLowerCase().includes(query);
@@ -490,37 +541,57 @@ function filterEvents() {
     return true;
   });
 
-  renderGlobeData();
-  updateCategoryChipsCounts();
+  // Simple cluster / anti-overlap offset for markers closely positioned
+  const clusters = {};
+  filtered.forEach(e => {
+    const key = `${Math.round(e.lat * 2) / 2}_${Math.round(e.lng * 2) / 2}`;
+    if (!clusters[key]) clusters[key] = [];
+    clusters[key].push(e);
+  });
+
+  const displayList = [];
+  Object.values(clusters).forEach(group => {
+    if (group.length === 1) {
+      group[0].clusterCount = 1;
+      displayList.push(group[0]);
+    } else {
+      // Offset overlapping markers slightly radially so each remains accessible
+      group.forEach((item, idx) => {
+        const angle = (idx / group.length) * 2 * Math.PI;
+        item.clusterCount = group.length;
+        // subtle offset
+        item.lat = item.lat + Math.sin(angle) * 0.25;
+        item.lng = item.lng + Math.cos(angle) * 0.25;
+        displayList.push(item);
+      });
+    }
+  });
+
+  state.filteredEvents = displayList;
+
+  if (state.globeInstance) {
+    state.globeInstance.htmlElementsData(state.filteredEvents);
+  }
+
+  updateCategoryCounters();
   buildSummary();
 }
 
-function renderGlobeData() {
-  if (!state.globeInstance) return;
-
-  // Update Points
-  state.globeInstance.pointsData(state.filteredEvents);
-
-  // Update Pulsing Rings for events updated in the last 48 hours
-  const recentEvents = state.filteredEvents.filter(e => e.isRecent);
-  state.globeInstance.ringsData(recentEvents);
-}
-
-// --- CATEGORY CHIPS UI ---
+// --- CATEGORY CHIPS RENDERING ---
 function renderCategoryChips() {
   const container = document.getElementById('categoryChips');
   container.innerHTML = '';
 
   state.categories.forEach(cat => {
+    const cfg = getCategoryConfig(cat.id);
     const chip = document.createElement('button');
-    chip.className = `cat-chip ${state.selectedCategoryIds.has(cat.id) ? 'active' : ''}`;
-    chip.style.setProperty('--chip-color', getCategoryColor(cat.id));
+    chip.className = `cat-item ${state.selectedCategoryIds.has(cat.id) ? 'active' : ''}`;
     chip.dataset.catId = cat.id;
 
     chip.innerHTML = `
-      <span class="chip-dot"></span>
-      <span>${cat.title}</span>
-      <span class="chip-count" id="count_${cat.id}">0</span>
+      <span class="cat-icon-svg" style="color: ${cfg.color}">${cfg.icon}</span>
+      <span class="cat-title">${cat.title}</span>
+      <span class="cat-count" id="count_${cat.id}">0</span>
     `;
 
     chip.addEventListener('click', () => {
@@ -529,9 +600,9 @@ function renderCategoryChips() {
       } else {
         state.selectedCategoryIds.add(cat.id);
       }
-      
-      const badge = document.getElementById('selectedCatCount');
-      badge.textContent = state.selectedCategoryIds.size === 0 ? 'ALL' : `${state.selectedCategoryIds.size} ACTIVE`;
+
+      const badge = document.getElementById('activeFilterBadge');
+      badge.textContent = state.selectedCategoryIds.size === 0 ? 'All' : `${state.selectedCategoryIds.size} active`;
 
       chip.classList.toggle('active', state.selectedCategoryIds.has(cat.id));
       filterEvents();
@@ -541,8 +612,7 @@ function renderCategoryChips() {
   });
 }
 
-function updateCategoryChipsCounts() {
-  // Count by category across all events
+function updateCategoryCounters() {
   const counts = {};
   state.allEvents.forEach(e => {
     counts[e.category.id] = (counts[e.category.id] || 0) + 1;
@@ -550,124 +620,117 @@ function updateCategoryChipsCounts() {
 
   state.categories.forEach(cat => {
     const el = document.getElementById(`count_${cat.id}`);
-    if (el) {
-      el.textContent = counts[cat.id] || 0;
-    }
+    if (el) el.textContent = counts[cat.id] || 0;
   });
 }
 
-// --- INSIGHT LAYER: TODAY'S SUMMARY & BARS (Stage 5) ---
+// --- SUMMARY / ALMANAC LAYER ---
 function buildSummary() {
   const events = state.filteredEvents;
-  const totalEl = document.getElementById('statTotalEvents');
-  const recentEl = document.getElementById('statRecentEvents');
-  const hotspotEl = document.getElementById('statHotspotRegion');
+  const headlineEl = document.getElementById('summaryHeadline');
   const chartEl = document.getElementById('categoryBarChart');
   const recTitle = document.getElementById('recTitle');
   const recCat = document.getElementById('recCategory');
   const recDate = document.getElementById('recDate');
   const recFlyBtn = document.getElementById('recFlyBtn');
 
-  totalEl.textContent = events.length;
-  const recentCount = events.filter(e => e.isRecent).length;
-  recentEl.textContent = recentCount;
-
-  // 1. Calculate highest density hotspot region (simple lat/lon grid bucketing: 30° bins)
-  const gridBins = {};
-  events.forEach(e => {
-    const latBin = Math.floor(e.lat / 30) * 30;
-    const lngBin = Math.floor(e.lng / 45) * 45;
-    const key = `${latBin >= 0 ? latBin + '°N' : Math.abs(latBin) + '°S'}, ${lngBin >= 0 ? lngBin + '°E' : Math.abs(lngBin) + '°W'}`;
-    gridBins[key] = (gridBins[key] || 0) + 1;
-  });
-
-  let topHotspot = 'None';
-  let topCount = 0;
-  Object.entries(gridBins).forEach(([bin, count]) => {
-    if (count > topCount) {
-      topCount = count;
-      topHotspot = `${bin} (${count} events)`;
-    }
-  });
-  hotspotEl.textContent = topHotspot;
-
-  // 2. Build Category Bar Chart (plain SVG / CSS bars)
-  const catDistribution = {};
-  events.forEach(e => {
-    catDistribution[e.category.title] = {
-      count: (catDistribution[e.category.title]?.count || 0) + 1,
-      color: e.categoryColor
-    };
-  });
-
-  const sortedCats = Object.entries(catDistribution).sort((a, b) => b[1].count - a[1].count);
-  const maxCatCount = sortedCats[0] ? sortedCats[0][1].count : 1;
-
-  chartEl.innerHTML = '';
-  if (sortedCats.length === 0) {
-    chartEl.innerHTML = '<div style="font-size: 11px; color: var(--text-dim); text-align: center; padding: 10px;">No events matching current criteria</div>';
-  } else {
-    sortedCats.forEach(([catTitle, data]) => {
-      const percentage = Math.round((data.count / maxCatCount) * 100);
-      const row = document.createElement('div');
-      row.className = 'bar-row';
-      row.innerHTML = `
-        <div class="bar-labels">
-          <span>${catTitle}</span>
-          <span class="font-mono">${data.count}</span>
-        </div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width: ${percentage}%; background-color: ${data.color}"></div>
-        </div>
-      `;
-      chartEl.appendChild(row);
-    });
-  }
-
-  // 3. Most recently updated event
-  if (events.length > 0) {
-    const sortedByDate = [...events].sort((a, b) => b.lastUpdatedDate - a.lastUpdatedDate);
-    const mostRecent = sortedByDate[0];
-    recTitle.textContent = mostRecent.title;
-    recCat.textContent = mostRecent.category.title;
-    recCat.style.color = mostRecent.categoryColor;
-    recDate.textContent = mostRecent.lastUpdatedStr;
-
-    recFlyBtn.onclick = () => {
-      selectAndFlyToEvent(mostRecent);
-    };
-  } else {
-    recTitle.textContent = 'No matching events';
-    recCat.textContent = '-';
-    recDate.textContent = '-';
+  if (events.length === 0) {
+    headlineEl.textContent = 'Nothing matches that filter. Try clearing a category.';
+    chartEl.innerHTML = '';
+    recTitle.textContent = 'No events currently active';
+    recCat.textContent = '—';
+    recDate.textContent = '—';
     recFlyBtn.onclick = null;
+    return;
   }
+
+  // 1. Generate human editorial summary headline
+  const catCounts = {};
+  events.forEach(e => {
+    catCounts[e.category.title] = (catCounts[e.category.title] || 0) + 1;
+  });
+
+  const sortedCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
+  const leadingCat = sortedCats[0];
+  headlineEl.textContent = `${events.length} active events. ${leadingCat[0]} lead with ${leadingCat[1]} across the globe.`;
+
+  // 2. Build Category Bar Chart with matching icons
+  const maxCount = leadingCat ? leadingCat[1] : 1;
+  chartEl.innerHTML = '';
+
+  sortedCats.slice(0, 5).forEach(([catTitle, count]) => {
+    const matched = events.find(e => e.category.title === catTitle);
+    const cfg = matched ? matched.categoryConfig : CATEGORY_STYLES.unknown;
+    const percentage = Math.round((count / maxCount) * 100);
+
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `
+      <div class="bar-meta">
+        <div class="bar-cat-info">
+          <span class="cat-icon-svg" style="color: ${cfg.color}; width: 14px; height: 14px;">${cfg.icon}</span>
+          <span>${catTitle}</span>
+        </div>
+        <span class="bar-count font-tabular">${count}</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: ${percentage}%; background-color: ${cfg.color}"></div>
+      </div>
+    `;
+    chartEl.appendChild(row);
+  });
+
+  // 3. Latest Observation Card
+  const sortedByDate = [...events].sort((a, b) => b.lastUpdatedDate - a.lastUpdatedDate);
+  const mostRecent = sortedByDate[0];
+
+  recTitle.textContent = mostRecent.title;
+  recCat.textContent = mostRecent.category.title;
+  recCat.style.color = mostRecent.categoryConfig.color;
+  recDate.textContent = mostRecent.lastUpdatedRelative;
+
+  recFlyBtn.onclick = () => selectAndFlyToEvent(mostRecent);
 }
 
-// --- INITIALIZATION & EVENT LISTENERS ---
+// --- INITIALIZATION ---
 async function loadFeedData(daysParam = 0) {
   const statusBadge = document.getElementById('liveFeedStatus');
   const statusLabel = document.getElementById('statusLabel');
   const retryBtn = document.getElementById('retryFeedBtn');
 
-  statusBadge.className = 'status-badge loading';
-  statusLabel.textContent = 'FETCHING EONET DATA...';
+  statusBadge.className = 'status-banner loading';
+  statusLabel.textContent = "Loading today's events...";
   if (retryBtn) retryBtn.style.display = 'none';
 
+  let rawEvents = [];
   try {
-    const rawEvents = await fetchEvents(daysParam);
-    state.allEvents = rawEvents.map(normalizeEvent).filter(Boolean);
-    filterEvents();
-
-    statusBadge.className = 'status-badge';
-    statusLabel.textContent = `LIVE FEED // ${state.allEvents.length} EVENTS`;
+    rawEvents = await fetchEvents(daysParam);
   } catch (err) {
-    console.error('Feed load error:', err);
-    statusBadge.className = 'status-badge error';
-    statusLabel.textContent = 'FEED ERROR: CHECK NETWORK';
+    console.error('NASA EONET fetch error:', err);
+    statusBadge.className = 'status-banner error';
+    statusLabel.textContent = err.status 
+      ? `Couldn't reach NASA feed (HTTP ${err.status}).` 
+      : "Couldn't reach NASA's event feed. Check connection.";
     if (retryBtn) {
       retryBtn.style.display = 'inline-block';
       retryBtn.onclick = () => loadFeedData(state.includeClosed ? 30 : 0);
+    }
+    return;
+  }
+
+  try {
+    state.allEvents = rawEvents.map(normalizeEvent).filter(Boolean);
+    filterEvents();
+
+    statusBadge.className = 'status-banner';
+    statusLabel.textContent = `${state.allEvents.length} events reported`;
+  } catch (renderErr) {
+    console.error('Drawing error:', renderErr);
+    statusBadge.className = 'status-banner error';
+    statusLabel.textContent = "Events loaded but couldn't be drawn.";
+    if (retryBtn) {
+      retryBtn.style.display = 'inline-block';
+      retryBtn.onclick = () => filterEvents();
     }
   }
 }
@@ -677,33 +740,36 @@ async function initApp() {
   const statusLabel = document.getElementById('statusLabel');
   const retryBtn = document.getElementById('retryFeedBtn');
 
+  // 1. Globe Initialization
   try {
-    // Initialize 3D Globe
     initGlobe();
-
-    // Fetch Categories
-    statusLabel.textContent = 'CONNECTING TO EONET...';
-    state.categories = await fetchCategories();
-    renderCategoryChips();
-
-    // Fetch initial events
-    await loadFeedData(0);
-
-  } catch (err) {
-    console.error('Initialization error:', err);
-    statusBadge.className = 'status-badge error';
-    statusLabel.textContent = 'FEED ERROR: CHECK NETWORK';
+  } catch (globeErr) {
+    console.error('Globe failure:', globeErr);
+    statusBadge.className = 'status-banner error';
+    statusLabel.textContent = "The globe couldn't start.";
     if (retryBtn) {
       retryBtn.style.display = 'inline-block';
       retryBtn.onclick = () => initApp();
     }
+    return;
   }
+
+  // 2. Categories
+  try {
+    state.categories = await fetchCategories();
+    renderCategoryChips();
+  } catch (catErr) {
+    console.warn('Categories fallback in place:', catErr);
+  }
+
+  // 3. Events Data
+  await loadFeedData(0);
 
   setupEventListeners();
 }
 
 function setupEventListeners() {
-  // Search box
+  // Search
   const searchInput = document.getElementById('eventSearch');
   const clearBtn = document.getElementById('clearSearchBtn');
 
@@ -720,7 +786,7 @@ function setupEventListeners() {
     filterEvents();
   });
 
-  // Toggle: Open Only vs Include Closed
+  // Open vs Past 30 Days toggle
   const btnOpen = document.getElementById('btnOpenOnly');
   const btnClosed = document.getElementById('btnIncludeClosed');
 
@@ -740,72 +806,60 @@ function setupEventListeners() {
     loadFeedData(30);
   });
 
-  // Basemap Layer Switcher
-  const layerButtons = document.querySelectorAll('.layer-btn');
-  layerButtons.forEach(btn => {
+  // Basemap switch
+  const basemapButtons = document.querySelectorAll('.basemap-btn');
+  basemapButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-      layerButtons.forEach(b => b.classList.remove('active'));
+      basemapButtons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.activeLayerKey = btn.dataset.layer;
       applyTileEngine(state.globeInstance);
     });
   });
 
-  // Date Slider for Imagery (0 to 30 days ago, default value=29 represents yesterday)
+  // Date Slider
   const dateSlider = document.getElementById('imageryDateSlider');
   const currentDateDisplay = document.getElementById('currentDateDisplay');
-  const dateOffsetTag = document.getElementById('dateOffsetTag');
-  const imageryDateLabel = document.getElementById('imageryDateLabel');
-
-  // Set initial display
-  currentDateDisplay.textContent = state.selectedDate;
 
   dateSlider.addEventListener('input', (e) => {
-    // 30 is today (0d), 29 is yesterday (1d), 0 is 30 days ago
     const sliderVal = Number(e.target.value);
     const daysAgo = 30 - sliderVal;
-    
-    // Protect: today (0 days ago) is often incomplete on GIBS, yesterday is safe
     const effectiveDays = Math.max(1, daysAgo);
     state.daysOffset = effectiveDays;
     state.selectedDate = getFormattedDate(effectiveDays);
 
-    currentDateDisplay.textContent = state.selectedDate;
-    dateOffsetTag.textContent = `-${effectiveDays}d`;
-    imageryDateLabel.textContent = effectiveDays === 1 ? 'YESTERDAY' : `${effectiveDays}D AGO`;
-
+    currentDateDisplay.textContent = effectiveDays === 1 ? 'Yesterday' : `${effectiveDays} days ago`;
     applyTileEngine(state.globeInstance);
   });
 
-  // Event Detail Panel Close
+  // Detail panel close button
   document.getElementById('closeDetailBtn')?.addEventListener('click', closeDetailPanel);
 
-  // "View satellite imagery here" button
+  // Focus imagery action
   document.getElementById('btnFocusImagery')?.addEventListener('click', () => {
     if (!state.selectedEvent) return;
-    // Switch to truecolor if not already
     state.activeLayerKey = 'truecolor';
-    document.querySelectorAll('.layer-btn').forEach(b => {
+    document.querySelectorAll('.basemap-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.layer === 'truecolor');
     });
     applyTileEngine(state.globeInstance);
-    // Zoom in close to event location
-    flyToEvent(state.selectedEvent, 0.25, 2000);
-  });
-
-  // Insight Drawer Toggle
-  const insightDrawer = document.getElementById('insightDrawer');
-  document.getElementById('summaryToggleBtn')?.addEventListener('click', () => {
-    insightDrawer.classList.toggle('open');
-    if (insightDrawer.classList.contains('open')) {
-      closeDetailPanel();
+    if (state.globeInstance) {
+      state.globeInstance.pointOfView({
+        lat: state.selectedEvent.lat,
+        lng: state.selectedEvent.lng,
+        altitude: 0.25
+      }, 1800);
     }
   });
-  document.getElementById('closeInsightBtn')?.addEventListener('click', () => {
-    insightDrawer.classList.remove('open');
+
+  // Reset view button
+  document.getElementById('btnResetView')?.addEventListener('click', () => {
+    if (!state.globeInstance) return;
+    state.globeInstance.pointOfView({ lat: 20, lng: 0, altitude: 2.2 }, 1400);
+    closeDetailPanel();
   });
 
-  // Auto-rotation toggle button
+  // Auto-rotate toggle
   const autoRotateBtn = document.getElementById('btnToggleAutoRotate');
   autoRotateBtn?.addEventListener('click', () => {
     const controls = state.globeInstance?.controls();
@@ -813,13 +867,6 @@ function setupEventListeners() {
     state.isAutoRotating = !state.isAutoRotating;
     controls.autoRotate = state.isAutoRotating;
     autoRotateBtn.classList.toggle('active', state.isAutoRotating);
-  });
-
-  // Reset View button
-  document.getElementById('btnResetView')?.addEventListener('click', () => {
-    if (!state.globeInstance) return;
-    state.globeInstance.pointOfView({ lat: 20, lng: 0, altitude: 2.2 }, 1500);
-    closeDetailPanel();
   });
 }
 

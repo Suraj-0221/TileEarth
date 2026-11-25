@@ -3,226 +3,183 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Earth Events Globe — Live Natural Events over NASA Imagery</title>
-  <meta name="description" content="Interactive 3D globe visualizing live natural disasters and events from NASA EONET over real-time GIBS satellite imagery.">
+  <title>Earth, right now — NASA Natural Events & Satellite Imagery</title>
+  <meta name="description" content="A quiet planetary atlas visualizing live natural events tracked by NASA over real-time satellite imagery.">
+  
+  <!-- Preconnect and Google Fonts: Newsreader (Editorial Serif) & Plus Jakarta Sans (Humanist UI Sans) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="style.css">
-  <!-- Pinned globe.gl library -->
-  <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.32.0/dist/globe.gl.min.js"></script>
+  
+  <!-- Pinned globe.gl v2.45.3 -->
+  <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.45.3/dist/globe.gl.min.js"></script>
 </head>
 <body>
-  <!-- Fullscreen 3D Globe Container -->
-  <div id="globeViz"></div>
+  <!-- Fullscreen 3D Globe Visualizer -->
+  <main id="globeViz" role="region" aria-label="Interactive 3D Earth Globe"></main>
 
-  <!-- Top Navigation & Header Bar -->
-  <header class="hud-header">
-    <div class="brand">
-      <div class="pulse-beacon"></div>
-      <div class="brand-text">
-        <h1>EARTH EVENTS GLOBE</h1>
-        <span class="sub-text">NASA EONET v3 // GIBS WMTS SATELLITE FEED</span>
+  <!-- Left Sidebar Rail: Navigation, Filters, and Basemaps -->
+  <aside class="sidebar-rail" aria-label="Exploration Controls">
+    <div class="rail-header">
+      <h1 class="site-title">Earth, right now</h1>
+      <p class="site-subtitle">Wildfires, storms, volcanoes and more, tracked by NASA and shown over yesterday's satellite imagery.</p>
+    </div>
+
+    <!-- Live Feed Status Banner -->
+    <div id="liveFeedStatus" class="status-banner loading" role="status" aria-live="polite">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span id="statusLabel" class="status-text">Loading today's events...</span>
+      <button id="retryFeedBtn" class="btn-text-retry" style="display: none;">Retry</button>
+    </div>
+
+    <!-- Search Box -->
+    <div class="search-box">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="eventSearch" placeholder="Filter by name or location..." aria-label="Filter events by title or location">
+      <button id="clearSearchBtn" class="search-clear-btn" aria-label="Clear search query" style="display: none;">&times;</button>
+    </div>
+
+    <!-- Open vs Closed Switcher -->
+    <div class="filter-mode-switch" role="group" aria-label="Event Status Filter">
+      <button id="btnOpenOnly" class="mode-btn active" data-days="0">Open events</button>
+      <button id="btnIncludeClosed" class="mode-btn" data-days="30">Past 30 days</button>
+    </div>
+
+    <!-- Category Filters List with Icons and Counts -->
+    <div class="rail-section">
+      <div class="section-heading">
+        <h2>Categories</h2>
+        <span id="activeFilterBadge" class="filter-count-badge">All</span>
+      </div>
+      <div id="categoryChips" class="category-list" role="group" aria-label="Filter by category">
+        <!-- Injected via JavaScript with bespoke inline SVG icons -->
       </div>
     </div>
-    
-    <div class="header-status">
-      <div id="liveFeedStatus" class="status-badge loading">
-        <span class="indicator-dot"></span>
-        <span id="statusLabel">CONNECTING TO EONET...</span>
-        <button id="retryFeedBtn" class="retry-mini-btn" title="Retry connection" style="display: none;">Retry ↻</button>
-      </div>
-      <button id="summaryToggleBtn" class="hud-btn" title="Toggle Today's Insight Summary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-        <span>Insights</span>
-      </button>
-    </div>
-  </header>
 
-  <!-- Floating Left Controls Panel -->
-  <div class="hud-controls-container">
-    <!-- Search and Mode Toggle -->
-    <div class="glass-card controls-card">
-      <div class="search-row">
-        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" id="eventSearch" placeholder="Search events by title or location..." autocomplete="off">
-        <button id="clearSearchBtn" class="icon-clear-btn" title="Clear search" style="display: none;">&times;</button>
+    <!-- Satellite Imagery Basemap Controls -->
+    <div class="rail-section">
+      <div class="section-heading">
+        <h2>Satellite basemap</h2>
       </div>
 
-      <div class="filter-row">
-        <div class="toggle-group">
-          <button id="btnOpenOnly" class="toggle-btn active" data-days="0">Open Events Only</button>
-          <button id="btnIncludeClosed" class="toggle-btn" data-days="30">Include Closed (30d)</button>
-        </div>
+      <div class="basemap-selector" role="group" aria-label="Satellite Imagery Layer">
+        <button class="basemap-btn active" data-layer="truecolor">True Color (MODIS)</button>
+        <button class="basemap-btn" data-layer="night">City Lights</button>
+        <button class="basemap-btn" data-layer="temp">Surface Temp</button>
       </div>
 
-      <!-- Categories Pills with live counts -->
-      <div class="category-section">
-        <div class="section-label">
-          <span>CATEGORIES</span>
-          <span id="selectedCatCount" class="badge-mini">ALL</span>
+      <div class="date-slider-box">
+        <div class="slider-header">
+          <span class="slider-caption">Imagery date</span>
+          <span id="currentDateDisplay" class="slider-val">Yesterday</span>
         </div>
-        <div id="categoryChips" class="category-chips-grid">
-          <!-- Populated dynamically via JS -->
-        </div>
-      </div>
-
-      <!-- Imagery Layer Switcher & Date Slider -->
-      <div class="imagery-section">
-        <div class="section-label">
-          <span>SATELLITE BASEMAP</span>
-          <span id="imageryDateLabel" class="imagery-date">YESTERDAY</span>
-        </div>
-        
-        <div class="layer-selector-group">
-          <button class="layer-btn active" data-layer="truecolor">True Color (MODIS)</button>
-          <button class="layer-btn" data-layer="night">City Lights</button>
-          <button class="layer-btn" data-layer="temp">Surface Temp</button>
-        </div>
-
-        <div class="slider-wrapper">
-          <div class="slider-label-row">
-            <span>Imagery Date: <strong id="currentDateDisplay">-</strong></span>
-            <span id="dateOffsetTag" class="tag-accent">-1d</span>
-          </div>
-          <input type="range" id="imageryDateSlider" min="0" max="30" value="29" step="1">
-          <div class="slider-ticks">
-            <span>30d ago</span>
-            <span>15d ago</span>
-            <span>Yesterday</span>
-          </div>
+        <input type="range" id="imageryDateSlider" min="0" max="30" value="29" step="1" aria-label="Satellite imagery observation date">
+        <div class="slider-legend">
+          <span>30 days ago</span>
+          <span>15 days</span>
+          <span>Yesterday</span>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Today's Insight Panel (Stage 5) -->
-  <aside id="insightDrawer" class="glass-card insight-drawer">
-    <div class="drawer-header">
-      <div class="drawer-title">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-        <h3>MISSION INSIGHTS // TODAY</h3>
+    <!-- Today's Almanac / Summary Block -->
+    <div class="rail-section summary-section">
+      <div class="section-heading">
+        <h2>Summary</h2>
       </div>
-      <button id="closeInsightBtn" class="close-btn">&times;</button>
-    </div>
-    
-    <div class="drawer-body">
-      <!-- High Level Metrics -->
-      <div class="metrics-grid">
-        <div class="metric-box">
-          <span class="metric-num" id="statTotalEvents">0</span>
-          <span class="metric-label">ACTIVE EVENTS</span>
-        </div>
-        <div class="metric-box">
-          <span class="metric-num" id="statRecentEvents">0</span>
-          <span class="metric-label">UPDATED &lt;48H</span>
-        </div>
-        <div class="metric-box full-width">
-          <span class="metric-accent" id="statHotspotRegion">-</span>
-          <span class="metric-label">HIGHEST DENSITY HOTSPOT REGION</span>
-        </div>
-      </div>
-
+      <p id="summaryHeadline" class="summary-headline">Gathering satellite observations...</p>
+      
       <!-- Category Distribution Bar Chart -->
-      <div class="chart-container">
-        <div class="section-label">EVENT DISTRIBUTION BY CATEGORY</div>
-        <div id="categoryBarChart" class="chart-bars"></div>
-      </div>
+      <div id="categoryBarChart" class="summary-bars" aria-label="Event category distribution chart"></div>
 
-      <!-- Most Recently Updated Event Card -->
-      <div class="recent-event-card">
-        <div class="section-label">LATEST SATELLITE OBSERVATION</div>
-        <div id="recentEventDetails" class="recent-event-content">
-          <div class="rec-title" id="recTitle">-</div>
-          <div class="rec-meta">
-            <span id="recCategory" class="badge-tag">-</span>
-            <span id="recDate" class="time-tag">-</span>
-          </div>
-          <button id="recFlyBtn" class="hud-btn-mini">Inspect on Globe &rarr;</button>
+      <!-- Latest Satellite Observation Card -->
+      <div id="recentEventCard" class="recent-observation-box">
+        <div class="obs-tag">Latest observation</div>
+        <div id="recTitle" class="obs-title">—</div>
+        <div class="obs-meta">
+          <span id="recCategory" class="obs-cat">—</span>
+          <span id="recDate" class="obs-time">—</span>
         </div>
+        <button id="recFlyBtn" class="btn-inspect">View on globe &rarr;</button>
       </div>
     </div>
   </aside>
 
-  <!-- Event Detail Slide-out Panel (Stage 3) -->
-  <aside id="eventDetailPanel" class="glass-card detail-panel">
-    <div class="panel-header">
-      <div class="event-type-badge" id="panelCategoryBadge">WILDFIRE</div>
-      <button id="closeDetailBtn" class="close-btn" aria-label="Close panel">&times;</button>
+  <!-- Event Detail Slide-in Panel -->
+  <section id="eventDetailPanel" class="detail-sheet" aria-labelledby="panelTitle" aria-hidden="true">
+    <div class="detail-sheet-header">
+      <div class="detail-title-group">
+        <div id="panelCategoryBadge" class="category-indicator-badge">
+          <span class="badge-icon" id="panelCategoryIcon"></span>
+          <span id="panelCategoryName">Event</span>
+        </div>
+        <h2 id="panelTitle" class="detail-heading">Event title</h2>
+      </div>
+      <button id="closeDetailBtn" class="close-sheet-btn" aria-label="Close details panel">&times;</button>
     </div>
-    
-    <div class="panel-body">
-      <h2 id="panelTitle" class="event-title">Event Title Here</h2>
-      
-      <div class="meta-row">
-        <div class="meta-item">
-          <span class="meta-key">STATUS</span>
-          <span id="panelStatus" class="meta-val status-val">OPEN</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-key">LAST UPDATED</span>
-          <span id="panelLastDate" class="meta-val">-</span>
-        </div>
-      </div>
 
-      <div class="meta-row">
-        <div class="meta-item">
-          <span class="meta-key">COORDINATES</span>
-          <span id="panelCoords" class="meta-val font-mono">-</span>
+    <div class="detail-sheet-body">
+      <div class="summary-grid">
+        <div class="summary-cell">
+          <span class="cell-label">Status</span>
+          <span id="panelStatus" class="cell-value">Open</span>
         </div>
-        <div class="meta-item">
-          <span class="meta-key">OBSERVATIONS</span>
-          <span id="panelObsCount" class="meta-val font-mono">1</span>
+        <div class="summary-cell">
+          <span class="cell-label">Last updated</span>
+          <span id="panelLastDate" class="cell-value">—</span>
+        </div>
+        <div class="summary-cell">
+          <span class="cell-label">Coordinates</span>
+          <span id="panelCoords" class="cell-value font-tabular">—</span>
+        </div>
+        <div class="summary-cell">
+          <span class="cell-label">Observations</span>
+          <span id="panelObsCount" class="cell-value font-tabular">1</span>
         </div>
       </div>
 
-      <div id="panelMagnitudeRow" class="meta-row" style="display: none;">
-        <div class="meta-item full-width">
-          <span class="meta-key">MAGNITUDE / EXTENT</span>
-          <span id="panelMagnitude" class="meta-val">-</span>
-        </div>
+      <div id="panelMagnitudeRow" class="detail-block" style="display: none;">
+        <span class="cell-label">Reported extent / magnitude</span>
+        <div id="panelMagnitude" class="cell-value highlight">—</div>
       </div>
 
-      <!-- Track Information -->
-      <div id="panelTrackSection" class="detail-section" style="display: none;">
-        <div class="section-label">RECORDED MOVEMENT TRACK</div>
-        <p class="track-desc">This event has <span id="trackPointsCount">0</span> observation checkpoints. Track trajectory has been rendered in cyan on the globe.</p>
+      <div id="panelTrackSection" class="detail-block" style="display: none;">
+        <span class="cell-label">Movement path</span>
+        <p class="track-explanation">This event has <span id="trackPointsCount" class="font-tabular">0</span> recorded observation points. Its trajectory is drawn on the globe.</p>
       </div>
 
-      <!-- Sources and Links -->
-      <div class="detail-section">
-        <div class="section-label">PRIMARY DATA SOURCES</div>
-        <ul id="panelSourcesList" class="sources-list"></ul>
+      <div class="detail-block">
+        <span class="cell-label">Information sources</span>
+        <ul id="panelSourcesList" class="sources-links"></ul>
       </div>
 
-      <!-- Action Button -->
-      <div class="panel-actions">
-        <button id="btnFocusImagery" class="hud-action-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="10"/></svg>
-          <span>View Satellite Imagery Here</span>
+      <div class="detail-actions">
+        <button id="btnFocusImagery" class="btn-primary-action">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="10"/></svg>
+          <span>Examine satellite imagery here</span>
         </button>
       </div>
     </div>
-  </aside>
+  </section>
 
-  <!-- Interactive HUD Overlays / Reset View -->
-  <div class="hud-floating-tools">
-    <button id="btnResetView" class="hud-icon-btn" title="Reset View to Global">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+  <!-- Floating Navigation Controls -->
+  <nav class="globe-viewport-controls" aria-label="Globe navigation controls">
+    <button id="btnResetView" class="nav-icon-btn" title="Reset view to global perspective" aria-label="Reset view to global perspective">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
     </button>
-    <button id="btnToggleAutoRotate" class="hud-icon-btn active" title="Toggle Auto-Rotation">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 15 5-3-5-3v6z"/></svg>
+    <button id="btnToggleAutoRotate" class="nav-icon-btn active" title="Toggle globe auto-rotation" aria-label="Toggle globe auto-rotation">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
     </button>
-  </div>
+  </nav>
 
-  <!-- Mandatory NASA GIBS and EONET Acknowledgment Footer -->
-  <footer class="hud-footer">
-    <div class="footer-ack">
-      We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS). | Event data: NASA EONET
-    </div>
+  <!-- Mandatory NASA GIBS and EONET Attribution Footer -->
+  <footer class="app-attribution-footer">
+    <p>We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS). &bull; Event data: NASA EONET</p>
   </footer>
 
-  <!-- App Entrypoint -->
+  <!-- App Entrypoint Script -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
